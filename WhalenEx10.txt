@@ -1,0 +1,87 @@
+#Whalen Ex. 10
+setwd("~/Desktop/Biocomputing/Biocomp-Fall2018-181109-Exercise10")
+data=read.csv(file="data.txt", header = TRUE, stringsAsFactors = FALSE) #creating data object
+head(data)
+
+nllike1<-function(p,x,y){ #creating a function for the first equation, the linear equation
+  B0=p[1] 
+  B1=p[2] 
+  sigma=exp(p[3]) #log of the error
+  expected=B0+B1*x #expected value is the equation
+  nll=-sum(dnorm(x=y, mean = expected, sd=sigma, log=TRUE)) #negative log likelihood of the sum of the normal distribution where x=y and the mean is the expected mean and standard deviation is error and it is the log
+  return(nll)
+}
+initialGuess=c(1,1,1) #initial guess of parameters to be optimized over
+fit1=optim(par = initialGuess, fn=nllike1, x=data$x, y=data$y) #optimization of initial guess
+print(fit1) #prints the value
+ggplot(data=data, aes(x=x, y=y))+geom_point() #plots data which looks linear
+
+nllike2<-function(p,x,y){ #creating function for the second quadratic equation
+  B0=p[1] 
+  B1=p[2]
+  B2=p[3]
+  sigma=exp(p[4]) #log of the error
+  expected=B0+B1*x+B2*x^2 #expected value is the equation
+  nll=-sum(dnorm(x=y, mean = expected, sd=sigma, log=TRUE)) #negative log likelihood of the sum of the normal distribution where x=y and the mean is the expected mean and standard deviation is error and it is the log
+  return(nll)
+}
+initialGuess=c(1,1,1,1) #initial guess of parameters to be optimized over
+fit2=optim(par = initialGuess, fn=nllike2, x=data$x, y=data$y) #optimization of parameters
+print(fit2) #print values
+
+diff=fit1$value-fit2$value #difference between the values of the different models
+teststat=2*diff #test statistic
+teststat
+df=length(fit2$par)-length(fit1$par) #degrees of freedom
+df
+1-pchisq(teststat, df=df) #super unlikely that quadratic equation is the data, the value is the negative log likelihood for the model of the best fit parameters;
+#want lowest nll bc that will best fit, the more parameters should do better than the model with less, so close to 1, chi squared should be between 0 and 1, less than 0.5 to be better fit, but it is 1 in this case
+
+#Problem 2:
+
+#state variables: dN1/dt and dN2/dt, competition a11, a12, a22, a21
+#parameters: 
+#R between 0 and 1, carrying capacity about 100, alpha about .01
+
+LVsim<-function(t,y,p){ #creation of function for the simulation 
+  N1=y[1] #unpacking variables
+  N2=y[2]
+  
+  R1=p[1]
+  alpha11=p[2]
+  alpha12=p[3]
+  R2=p[4]
+  alpha22=p[5]
+  alpha21=p[6]
+  
+  dN1dt=R1*(1-N1*alpha11-N2*alpha12)*N1
+  dN2dt=R2*(1-N2*alpha22-N1*alpha21)*N2
+  return(list(c(dN1dt, dN2dt)))
+}
+
+LVparams1=c(0.4,0.05,0.001,0.4,0.05,0.002) #initial parameters that follow rules for alpha
+times=1:100
+y0=c(1,1)
+
+LVsim1=ode(y=y0, times=times, func = LVsim, parms = LVparams1)
+LVout1=data.frame(time=LVsim1[,1], N1=LVsim1[,2],N2=LVsim1[,3])
+ggplot(LVout1,aes(x=time,y=N1))+geom_line()+geom_line(data=LVout1,mapping=aes(x=time,y=N2),col='blue')+theme_classic()
+#shows coexistence
+
+LVparams2=c(0.3,0.05,0.009,0.3,0.05,0.007)
+times=1:100
+y0=c(1,1)
+
+LVsim2=ode(y=y0, times=times, func = LVsim, parms = LVparams2)
+LVout2=data.frame(time=LVsim2[,1], N1=LVsim2[,2],N2=LVsim2[,3])
+ggplot(LVout2,aes(x=time,y=N1))+geom_line()+geom_line(data=LVout2,mapping=aes(x=time,y=N2),col='blue')+theme_classic()
+#shows coexistence
+
+LVparams3=c(0.5,0.005,0.01,0.5,0.004,0.02)
+times=1:100
+y0=c(1,1)
+
+LVsim3=ode(y=y0, times=times, func = LVsim, parms = LVparams3)
+LVout3=data.frame(time=LVsim3[,1], N1=LVsim3[,2],N2=LVsim3[,3])
+ggplot(LVout3,aes(x=time,y=N1))+geom_line()+geom_line(data=LVout3,mapping=aes(x=time,y=N2),col='blue')+theme_classic()
+#alpha does not follow the rules and shows dominance of one species
